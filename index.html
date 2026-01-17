@@ -133,32 +133,26 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // Conexión a Supabase
         const SUPABASE_URL = 'https://eujjoycddsumfeeprmnz.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV1ampveWNkZHN1bWZlZXBybW56Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgzOTc5NDcsImV4cCI6MjA4Mzk3Mzk0N30.T9b05UCdze6GUV6qpVkjT1U5KYPEBO8jKrEXX4busmo';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const cliente = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Elementos del HTML
         const inputTarea = document.getElementById('nueva-tarea');
         const btnAgregar = document.getElementById('btn-agregar');
         const listaTareas = document.getElementById('lista-tareas');
 
-        // Cargar tareas al iniciar
         cargarTareas();
 
-        // Evento: click en botón Agregar
         btnAgregar.addEventListener('click', agregarTarea);
 
-        // Evento: presionar Enter en el input
         inputTarea.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 agregarTarea();
             }
         });
 
-        // Función: Cargar todas las tareas desde Supabase
         async function cargarTareas() {
-            const { data: tareas, error } = await supabase
+            const { data: tareas, error } = await cliente
                 .from('Tareas')
                 .select('*')
                 .order('created_at', { ascending: false });
@@ -180,7 +174,6 @@
             });
         }
 
-        // Función: Crear el elemento HTML de una tarea
         function crearElementoTarea(tarea) {
             const div = document.createElement('div');
             div.className = 'tarea' + (tarea.completada ? ' completada' : '');
@@ -190,18 +183,16 @@
                 <button class="btn-eliminar">Eliminar</button>
             `;
 
-            // Evento: marcar como completada
             div.querySelector('.tarea-checkbox').addEventListener('change', async function() {
-                await supabase
+                await cliente
                     .from('Tareas')
                     .update({ completada: this.checked })
                     .eq('id', tarea.id);
                 cargarTareas();
             });
 
-            // Evento: eliminar tarea
             div.querySelector('.btn-eliminar').addEventListener('click', async function() {
-                await supabase
+                await cliente
                     .from('Tareas')
                     .delete()
                     .eq('id', tarea.id);
@@ -211,12 +202,11 @@
             return div;
         }
 
-        // Función: Agregar nueva tarea
         async function agregarTarea() {
             const texto = inputTarea.value.trim();
             if (!texto) return;
 
-            await supabase
+            await cliente
                 .from('Tareas')
                 .insert([{ texto: texto, completada: false }]);
 

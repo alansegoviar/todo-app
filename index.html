@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Tareas</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: #0a1628;
+            color: #eaeaea;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #4a9b8c;
+            margin-bottom: 30px;
+        }
+
+        .input-section {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        #nueva-tarea {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #1a5f7a;
+            border-radius: 8px;
+            background-color: #122640;
+            color: #eaeaea;
+            font-size: 16px;
+        }
+
+        #nueva-tarea:focus {
+            outline: none;
+            border-color: #4a9b8c;
+        }
+
+        #btn-agregar {
+            padding: 12px 25px;
+            background-color: #4a9b8c;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        #btn-agregar:hover {
+            background-color: #3d8577;
+        }
+
+        .tarea {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 15px;
+            background-color: #122640;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #1a5f7a;
+        }
+
+        .tarea.completada {
+            opacity: 0.6;
+            border-left-color: #4a9b8c;
+        }
+
+        .tarea.completada .tarea-texto {
+            text-decoration: line-through;
+        }
+
+        .tarea-checkbox {
+            width: 22px;
+            height: 22px;
+            cursor: pointer;
+        }
+
+        .tarea-texto {
+            flex: 1;
+            font-size: 16px;
+        }
+
+        .btn-eliminar {
+            padding: 8px 12px;
+            background-color: #c0392b;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-eliminar:hover {
+            background-color: #a93226;
+        }
+
+        .mensaje {
+            text-align: center;
+            color: #888;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📝 Mis Tareas</h1>
+        
+        <div class="input-section">
+            <input type="text" id="nueva-tarea" placeholder="Escribí una tarea...">
+            <button id="btn-agregar">Agregar</button>
+        </div>
+
+        <div id="lista-tareas">
+            <p class="mensaje">Cargando tareas...</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Conexión a Supabase
+        const SUPABASE_URL = 'https://eujjoycddsumfeeprmnz.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV1ampveWNkZHN1bWZlZXBybW56Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgzOTc5NDcsImV4cCI6MjA4Mzk3Mzk0N30.T9b05UCdze6GUV6qpVkjT1U5KYPEBO8jKrEXX4busmo';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // Elementos del HTML
+        const inputTarea = document.getElementById('nueva-tarea');
+        const btnAgregar = document.getElementById('btn-agregar');
+        const listaTareas = document.getElementById('lista-tareas');
+
+        // Cargar tareas al iniciar
+        cargarTareas();
+
+        // Evento: click en botón Agregar
+        btnAgregar.addEventListener('click', agregarTarea);
+
+        // Evento: presionar Enter en el input
+        inputTarea.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                agregarTarea();
+            }
+        });
+
+        // Función: Cargar todas las tareas desde Supabase
+        async function cargarTareas() {
+            const { data: tareas, error } = await supabase
+                .from('Tareas')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                listaTareas.innerHTML = '<p class="mensaje">Error al cargar tareas</p>';
+                console.error(error);
+                return;
+            }
+
+            if (tareas.length === 0) {
+                listaTareas.innerHTML = '<p class="mensaje">No hay tareas. ¡Agregá una!</p>';
+                return;
+            }
+
+            listaTareas.innerHTML = '';
+            tareas.forEach(tarea => {
+                listaTareas.appendChild(crearElementoTarea(tarea));
+            });
+        }
+
+        // Función: Crear el elemento HTML de una tarea
+        function crearElementoTarea(tarea) {
+            const div = document.createElement('div');
+            div.className = 'tarea' + (tarea.completada ? ' completada' : '');
+            div.innerHTML = `
+                <input type="checkbox" class="tarea-checkbox" ${tarea.completada ? 'checked' : ''}>
+                <span class="tarea-texto">${tarea.texto}</span>
+                <button class="btn-eliminar">Eliminar</button>
+            `;
+
+            // Evento: marcar como completada
+            div.querySelector('.tarea-checkbox').addEventListener('change', async function() {
+                await supabase
+                    .from('Tareas')
+                    .update({ completada: this.checked })
+                    .eq('id', tarea.id);
+                cargarTareas();
+            });
+
+            // Evento: eliminar tarea
+            div.querySelector('.btn-eliminar').addEventListener('click', async function() {
+                await supabase
+                    .from('Tareas')
+                    .delete()
+                    .eq('id', tarea.id);
+                cargarTareas();
+            });
+
+            return div;
+        }
+
+        // Función: Agregar nueva tarea
+        async function agregarTarea() {
+            const texto = inputTarea.value.trim();
+            if (!texto) return;
+
+            await supabase
+                .from('Tareas')
+                .insert([{ texto: texto, completada: false }]);
+
+            inputTarea.value = '';
+            cargarTareas();
+        }
+    </script>
+</body>
+</html>
